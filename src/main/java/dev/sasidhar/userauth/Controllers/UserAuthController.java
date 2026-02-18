@@ -3,13 +3,18 @@ package dev.sasidhar.userauth.Controllers;
 import dev.sasidhar.userauth.DTOs.UserDto;
 import dev.sasidhar.userauth.DTOs.UserLoginDto;
 import dev.sasidhar.userauth.DTOs.UserSignUpDto;
+import dev.sasidhar.userauth.DTOs.ValidateTokenDto;
 import dev.sasidhar.userauth.Exceptions.InsufficientDetails;
 import dev.sasidhar.userauth.Exceptions.UserAlreadyExists;
 import dev.sasidhar.userauth.Models.User;
 import dev.sasidhar.userauth.Services.IUserAuthService;
+import dev.sasidhar.userauth.pojos.User_Token;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,11 +60,26 @@ public class UserAuthController{
     public ResponseEntity<UserDto> userLogin(@RequestBody UserLoginDto userLoginDto){
         if(userLoginDto.getEmail()== null||userLoginDto.getPassword() == null)
             throw new InsufficientDetails("Please make sure you provide email & password");
-        User user = userAuthService.userLogin(userLoginDto.getEmail(), userLoginDto.getPassword());
+        User_Token user = userAuthService.userLogin(userLoginDto.getEmail(), userLoginDto.getPassword());
         if(user == null)
             throw new InsufficientDetails("Incorrect password / User not available");
-        return new ResponseEntity<>(user.converttoDto(),HttpStatus.ACCEPTED);
+        MultiValueMap<String,String> Headers = new LinkedMultiValueMap<>();
+        Headers.add(HttpHeaders.COOKIE,user.getToken());
+        HttpHeaders header = new HttpHeaders(Headers);
+        return new ResponseEntity<>(user.getUser().converttoDto(),header,HttpStatus.ACCEPTED);
 
 
+
+    }
+    @PostMapping("/validateToken")
+    public ResponseEntity<String> validateToken(@RequestBody ValidateTokenDto validateTokenDto) {
+        Boolean result = userAuthService.validateToken(validateTokenDto.getToken());
+
+        if(result == false) {
+            return new ResponseEntity<>("Please login again, Inconvenience Regretted", HttpStatus.FORBIDDEN);
+            //throw new RuntimeException("Please login again, Inconvenience Regretted");
+        }else{
+            return new ResponseEntity<>("Token is valid", HttpStatus.OK);
+        }
     }
 }
