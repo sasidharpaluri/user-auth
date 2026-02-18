@@ -1,6 +1,8 @@
 package dev.sasidhar.userauth.Services;
 
+import dev.sasidhar.userauth.Exceptions.IncorrectCredentials;
 import dev.sasidhar.userauth.Exceptions.UserAlreadyExists;
+import dev.sasidhar.userauth.Exceptions.UserNotFound;
 import dev.sasidhar.userauth.Models.Role;
 import dev.sasidhar.userauth.Models.State;
 import dev.sasidhar.userauth.Models.User;
@@ -8,6 +10,7 @@ import dev.sasidhar.userauth.Repositories.RoleRepository;
 import dev.sasidhar.userauth.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.server.DelegatingServerHttpResponse;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -22,6 +25,9 @@ public class UserAuthService implements IUserAuthService{
     @Autowired
     private RoleRepository roleRepo;
 
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
     @Override
     public User userSignUp(String name,String email,String password) {
         /*
@@ -30,12 +36,17 @@ public class UserAuthService implements IUserAuthService{
         Optional<User> u = userRepo.findUserByEmail(email);
 
         if(u.isPresent()){
-            return null;
+            throw new UserAlreadyExists("User already exists");
         }
         User user = new User();
         user.setName(name);
         user.setEmail(email);
-        user.setPassword(password);
+
+        /*
+        BCrypt is now way hash -
+         */
+
+        user.setPassword(passwordEncoder.encode(password));
         user.setCreatedAt(new Date());
         user.setLastModifiedAt(new Date());
         user.setState(State.ACTIVE);
@@ -62,12 +73,14 @@ public class UserAuthService implements IUserAuthService{
     }
     public User userLogin(String email,String password){
         Optional<User> user = userRepo.findUserByEmail(email);
+
                 if(user.isPresent()){
-                    if(user.get().getPassword().equals(password))
+                    if(passwordEncoder.matches(password,user.get().getPassword())) {
                         return user.get();
+                    }
                     else
-                        return null;
+                        throw new IncorrectCredentials("Incorrect credentials entered");
                 }
-        return null;
+        throw new UserNotFound("User not found");
     }
 }

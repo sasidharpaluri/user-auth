@@ -41,7 +41,7 @@ public class UserAuthController{
 
      */
     @PostMapping("/signup")
-    public ResponseEntity<UserDto> userSignUp(@RequestBody UserSignUpDto userSignUpDto) throws Exception {
+    public ResponseEntity<UserDto> userSignUp(@RequestBody UserSignUpDto userSignUpDto){
        // System.out.println(userSignUpDto.getEmail() + " ----- " + userSignUpDto.getName() + " -------- " + userSignUpDto.getPassword());
         if(userSignUpDto.getName()== null||userSignUpDto.getEmail()== null||userSignUpDto.getPassword() == null)
                 throw new InsufficientDetails("Please make sure you provide name,email,password");
@@ -52,7 +52,9 @@ public class UserAuthController{
     }
 
     @PostMapping("/login")
-    public ResponseEntity<UserDto> userLogin(@RequestBody UserLoginDto userLoginDto) throws Exception{
+    public ResponseEntity<UserDto> userLogin(@RequestBody UserLoginDto userLoginDto){
+        if(userLoginDto.getEmail()== null||userLoginDto.getPassword() == null)
+            throw new InsufficientDetails("Please make sure you provide email & password");
         User user = userAuthService.userLogin(userLoginDto.getEmail(), userLoginDto.getPassword());
         if(user == null)
             throw new InsufficientDetails("Incorrect password / User not available");
