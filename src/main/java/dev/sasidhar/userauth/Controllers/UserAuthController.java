@@ -56,6 +56,16 @@ public class UserAuthController{
         return new ResponseEntity<>(created_user.converttoDto(), HttpStatus.CREATED);
     }
 
+    @PostMapping("/signup/admin")
+    public ResponseEntity<UserDto> adminSignUp(@RequestBody UserSignUpDto userSignUpDto){
+        if(userSignUpDto.getName()== null||userSignUpDto.getEmail()== null||userSignUpDto.getPassword() == null)
+                throw new InsufficientDetails("Please make sure you provide name,email,password");
+        User created_user = userAuthService.adminSignUp(userSignUpDto.getName(),userSignUpDto.getEmail(),userSignUpDto.getPassword());
+        if(created_user == null)
+            throw new UserAlreadyExists("User already exists");
+        return new ResponseEntity<>(created_user.converttoDto(), HttpStatus.CREATED);
+    }
+
     @PostMapping("/login")
     public ResponseEntity<UserDto> userLogin(@RequestBody UserLoginDto userLoginDto){
         if(userLoginDto.getEmail()== null||userLoginDto.getPassword() == null)
@@ -68,8 +78,6 @@ public class UserAuthController{
         HttpHeaders header = new HttpHeaders(Headers);
         return new ResponseEntity<>(user.getUser().converttoDto(),header,HttpStatus.ACCEPTED);
 
-
-
     }
     @PostMapping("/validateToken")
     public ResponseEntity<String> validateToken(@RequestBody ValidateTokenDto validateTokenDto) {
@@ -77,9 +85,17 @@ public class UserAuthController{
 
         if(result == false) {
             return new ResponseEntity<>("Please login again, Inconvenience Regretted", HttpStatus.FORBIDDEN);
-            //throw new RuntimeException("Please login again, Inconvenience Regretted");
         }else{
             return new ResponseEntity<>("Token is valid", HttpStatus.OK);
         }
+    }
+
+    @PostMapping("/validateAdminToken")
+    public ResponseEntity<String> validateAdminToken(@RequestBody ValidateTokenDto validateTokenDto) {
+        Boolean result = userAuthService.validateAdminToken(validateTokenDto.getToken());
+        if(!result) {
+            return new ResponseEntity<>("Admin access required", HttpStatus.FORBIDDEN);
+        }
+        return new ResponseEntity<>("Admin token valid", HttpStatus.OK);
     }
 }

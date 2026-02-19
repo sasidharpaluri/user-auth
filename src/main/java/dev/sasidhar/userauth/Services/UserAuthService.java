@@ -76,6 +76,34 @@ public class UserAuthService implements IUserAuthService{
 
 
     }
+
+    @Override
+    public User adminSignUp(String name,String email,String password) {
+        Optional<User> u = userRepo.findUserByEmail(email);
+        if(u.isPresent()){
+            throw new UserAlreadyExists("User already exists");
+        }
+        User user = new User();
+        user.setName(name);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setCreatedAt(new Date());
+        user.setLastModifiedAt(new Date());
+        user.setState(State.ACTIVE);
+
+        Optional<Role> getRole = roleRepo.findByName("ADMIN");
+        if(getRole.isEmpty()){
+            Role role = new Role();
+            role.setName("ADMIN");
+            role.setCreatedAt(new Date());
+            role.setLastModifiedAt(new Date());
+            role.setState(State.ACTIVE);
+            user.setRoles(List.of(roleRepo.save(role)));
+        } else {
+            user.setRoles(List.of(getRole.get()));
+        }
+        return userRepo.save(user);
+    }
     public User_Token userLogin(String email, String password){
         Optional<User> user = userRepo.findUserByEmail(email);
 
@@ -128,5 +156,35 @@ public class UserAuthService implements IUserAuthService{
         System.out.println(claims);
         long currtime = System.currentTimeMillis();
         return currtime <= (Long) claims.get("exp");
+    }
+
+    @Override
+    public Boolean validateAdminToken(String token) {
+        try {
+            JwtParser jwtParser = Jwts.parser().verifyWith(secretKey).build();
+            Claims claims = jwtParser.parseSignedClaims(token).getPayload();
+            long currtime = System.currentTimeMillis();
+            
+            // Check if token is expired
+            if(currtime > (Long) claims.get("exp")) {
+                return false;
+            }
+            
+            // Get roles from token
+            List<?> roles = (List<?>) claims.get("scope");
+            
+            // Check each role to see if it's ADMIN
+            for(Object role : roles) {
+                Map<?, ?> roleMap = (Map<?, ?>) role;
+                String roleName = (String) roleMap.get("name");
+                if("ADMIN".equals(roleName)) {
+                    return true;  // Found ADMIN role!
+                }
+            }
+            
+            return false;  // No ADMIN role found
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
